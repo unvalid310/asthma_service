@@ -58,10 +58,18 @@ class ResultController extends BaseController
         $response['data'] = [];
 
         $userId = $this->request->getGet('user_id');
+
+        if ($this->request->getGet('bulan')) {
+            $bulan = $this->request->getGet('bulan');
+        } else {
+            $bulan = date('m');
+        }
+
         $historyModel = new HistoryModel();
 
         $data = $historyModel
             ->where('user_id', $userId)
+            ->where('MONTH(date)', $bulan)
             ->orderBy('date', 'desc')
             ->find();
 
