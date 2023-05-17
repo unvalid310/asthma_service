@@ -23,65 +23,35 @@ class AnalizeController extends BaseController
         $response['message'] = '';
         $response['data'] = [];
 
-        $bodyValue = 0;
-        $enviValue = 0;
-        $mindValue = 0;
+        $historyModel = new HistoryModel();
 
-        $bodyModel = new BodyModel();
-        $dataBody = $bodyModel
-        ->where([
-            'DATE(created_at)' => date('Y-m-d'),
-            // 'user_id' => $userId,
-            ])
+        $data = $historyModel
+            ->where('user_id', $userId)
+            ->where('date', date('Y-m-d'))
             ->first();
 
+        if ($data) {
+            $maxValue = array($data->body, $data->envi, $data->mind);
+            $response['message'] = 'Data has been loaded.';
+            $response['data'] = [
+                'body' => doubleval($data->body),
+                'envi' => doubleval($data->envi),
+                'mind' => doubleval($data->mind),
+                'max' => doubleval(max($maxValue)),
+            ];
 
-        $enviModel = new EnvironmemtModel();
-        $dataEnvi = $enviModel
-        ->where([
-            'DATE(created_at)' => date('Y-m-d'),
-            // 'user_id' => $userId,
-            ])
-            ->first();
+            return $this->respond($response, 200);
+        } else {
+            $response['message'] = 'Data has been loaded.';
+            $response['data'] = [
+                'body' => 0,
+                'envi' => 0,
+                'mind' => 0,
+                'max' => 0,
+            ];
 
-
-        $mindModel = new MindModel();
-        $dataMind = $mindModel
-        ->where([
-            'DATE(created_at)' => date('Y-m-d'),
-            // 'user_id' => $userId,
-            ])
-            ->first();
-
-        if ($dataBody) {
-            # code...
-            $arrayBody = array($dataBody->heart_rate, $dataBody->spo2, $dataBody->sleeping_quality);
-            $bodyValue = round(array_sum($arrayBody)/count($arrayBody), 2);
+            return $this->respond($response, 200);
         }
-
-        if ($dataEnvi) {
-            # code...
-            $arrayEnvi = array($dataEnvi->temperature, $dataEnvi->humidity, $dataEnvi->co2);
-            $enviValue = round(array_sum($arrayEnvi)/count($arrayEnvi), 2);
-        }
-
-        if ($dataMind) {
-            # code...
-            $arrayMind = array($dataMind->q1, $dataMind->q2, $dataMind->q3, $dataMind->q4, $dataMind->q5, $dataMind->q6, $dataMind->q7, $dataMind->q8, $dataMind->q9, $dataMind->q10);
-            $mindValue = round(array_sum($arrayMind)/count($arrayMind), 2);
-        }
-
-
-        $maxValue = array($bodyValue, $enviValue, $mindValue);
-
-        $response['data'] = [
-            'body' => $bodyValue,
-            'envi' => $enviValue,
-            'mind' => $mindValue,
-            'max'=>max($maxValue),
-        ];
-
-        return $this->respond($response, 200);
     }
 
     public function body()
@@ -93,7 +63,6 @@ class AnalizeController extends BaseController
 
         $bodyModel = new BodyModel();
         $userId = $this->request->getGet('user_id');
-
 
         $data = $bodyModel
             ->where([
@@ -168,11 +137,11 @@ class AnalizeController extends BaseController
             'sleeping_quality' => $body->sleeping_quality
         );
 
-        $dataBody = array($body->heart_rate, $body->spo2, $body->sleeping_quality);
+        $dataBody = array($body->heart_rate*0.3, $body->spo2*0.2, $body->sleeping_quality*0.1);
         $resultData = array(
             'user_id' => $body->user_id,
             'date' => date('Y-m-d'),
-            'body' => round(array_sum($dataBody)/count($dataBody), 2)
+            'body' => round((array_sum($dataBody)/count($dataBody))*0.6, 2)
         );
 
         $existHistory = $historyModel
@@ -271,11 +240,11 @@ class AnalizeController extends BaseController
             'sleeping_quality' => $body->sleeping_quality
         );
 
-        $dataBody = array($body->heart_rate, $body->spo2, $body->sleeping_quality);
+        $dataBody = array($body->heart_rate*0.3, $body->spo2*0.2, $body->sleeping_quality*0.1);
         $resultData = array(
             'user_id' => $body->user_id,
             'date' => date('Y-m-d'),
-            'body' => round(array_sum($dataBody)/count($dataBody), 2)
+            'body' => round((array_sum($dataBody)/count($dataBody))*0.6, 2)
         );
 
         $existHistory = $historyModel
@@ -357,6 +326,9 @@ class AnalizeController extends BaseController
             "co2" => [
                 "rules" => "required"
             ],
+            "pm25" => [
+                "rules" => "required"
+            ],
         ];
 
         $message = [
@@ -370,7 +342,10 @@ class AnalizeController extends BaseController
                 'required' => 'SpO2 tidak boleh kosong',
             ],
             'co2' => [
-                'required' => 'Sleeping quality tidak boleh kosong',
+                'required' => 'Co2 quality tidak boleh kosong',
+            ],
+            "pm25" => [
+                "required" => "PM 25 tidak boleh kosong"
             ],
         ];
 
@@ -389,14 +364,15 @@ class AnalizeController extends BaseController
             'user_id' => $body->user_id,
             'temperature' => $body->temperature,
             'humidity' => $body->humidity,
-            'co2' => $body->co2
+            'co2' => $body->co2,
+            'pm25' => $body->pm25,
         );
 
-        $dataEnvi = array($body->temperature, $body->humidity, $body->co2);
+        $dataEnvi = array($body->temperature*0.06, $body->humidity*0.05, $body->co2*0.05, $body->pm25*0.04);
         $resultData = array(
             'user_id' => $body->user_id,
             'date' => date('Y-m-d'),
-            'envi' => round(array_sum($dataEnvi)/count($dataEnvi), 2)
+            'envi' => round((array_sum($dataEnvi)/count($dataEnvi))*0.2, 2)
         );
 
         $existHistory = $historyModel
@@ -447,20 +423,24 @@ class AnalizeController extends BaseController
         $response['success'] = false;
         $response['message'] = '';
         $response['data'] = [];
+
         $rules = [
-            "user_id" => [
-                "rules" => "required"
-            ],
-            "temperature" => [
-                "rules" => "required"
-            ],
-            "humidity" => [
-                "rules" => "required"
-            ],
-            "co2" => [
-                "rules" => "required"
-            ],
-        ];
+                    "user_id" => [
+                        "rules" => "required"
+                    ],
+                    "temperature" => [
+                        "rules" => "required"
+                    ],
+                    "humidity" => [
+                        "rules" => "required"
+                    ],
+                    "co2" => [
+                        "rules" => "required"
+                    ],
+                    "pm25" => [
+                        "rules" => "required"
+                    ],
+                ];
 
         $message = [
             'user_id' => [
@@ -473,7 +453,10 @@ class AnalizeController extends BaseController
                 'required' => 'SpO2 tidak boleh kosong',
             ],
             'co2' => [
-                'required' => 'Sleeping quality tidak boleh kosong',
+                'required' => 'Co2 quality tidak boleh kosong',
+            ],
+            "pm25" => [
+                "required" => "PM 25 tidak boleh kosong"
             ],
         ];
 
@@ -492,14 +475,15 @@ class AnalizeController extends BaseController
             'user_id' => $body->user_id,
             'temperature' => $body->temperature,
             'humidity' => $body->humidity,
-            'co2' => $body->co2
+            'co2' => $body->co2,
+            'pm25' => $body->pm25,
         );
 
-        $dataEnvi = array($body->temperature, $body->humidity, $body->co2);
+        $dataEnvi = array($body->temperature*0.06, $body->humidity*0.05, $body->co2*0.05, $body->pm25*0.04);
         $resultData = array(
             'user_id' => $body->user_id,
             'date' => date('Y-m-d'),
-            'envi' => round(array_sum($dataEnvi)/count($dataEnvi), 2)
+            'envi' => round((array_sum($dataEnvi)/count($dataEnvi))*0.2, 2)
         );
 
         $existHistory = $historyModel
@@ -668,7 +652,7 @@ class AnalizeController extends BaseController
         $resultData = array(
             'user_id' => $body->user_id,
             'date' => date('Y-m-d'),
-            'mind' => round(array_sum($dataMind)/count($dataMind), 2)
+            'mind' => round(((array_sum($dataMind)*0.02)/count($dataMind))*0.2, 2)
         );
 
         $existHistory = $historyModel
@@ -820,7 +804,7 @@ class AnalizeController extends BaseController
         $resultData = array(
             'user_id' => $body->user_id,
             'date' => date('Y-m-d'),
-            'mind' => round(array_sum($dataMind)/count($dataMind), 2)
+            'mind' => round(((array_sum($dataMind)*0.02)/count($dataMind))*0.2, 2)
         );
 
         $existHistory = $historyModel
