@@ -54,14 +54,12 @@ class ResultController extends BaseController
 
         if ($dataBody) {
             # code...
-            $arrayBody = array($dataBody->heart_rate*0.3, $dataBody->spo2*0.2, $dataBody->sleeping_quality*0.1);
-            $bodyValue = round((array_sum($arrayBody)/count($arrayBody))*0.6, 2);
+            $bodyValue = $dataBody;
         }
 
         if ($dataEnvi) {
             # code...
-            $arrayEnvi = array($dataEnvi->temperature*0.06, $dataEnvi->humidity*0.05, $dataEnvi->co2*0.05, $dataEnvi->pm25*0.04);
-            $enviValue = round((array_sum($arrayEnvi)/count($arrayEnvi))*0.2, 2);
+            $enviValue = $dataEnvi;
         }
 
         if ($dataMind) {
